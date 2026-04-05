@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dementia Care AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-body: #f4f7f8;
+            --primary: #3ba9c2;
+            --text-main: #2d3436;
+            --text-sub: #636e72;
+            --accent-orange: #ff8a65;
+            --accent-purple: #9575cd;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: #cbd5e0;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-shell {
+            width: 100%;
+            max-width: 430px;
+            height: 100%;
+            background-color: var(--bg-body);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 0 40px rgba(0,0,0,0.2);
+        }
+
+        /* --- SCREEN ENGINE --- */
+        .screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%;
+            height: calc(100% - 75px);
+            background-color: var(--bg-body);
+            display: none;
+            flex-direction: column;
+            overflow-y: auto;
+            z-index: 10;
+        }
+        .screen.active { display: flex; }
+
+        /* --- SHARED COMPONENTS --- */
+        .padding-wrap { padding: 24px 20px; }
+        .back-nav { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; }
+        .back-btn { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-main); }
+        .how-it-works { background: white; border-radius: 20px; padding: 20px; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
+        .how-it-works h4 { font-size: 15px; margin-bottom: 8px; color: var(--text-main); }
+        .how-it-works p { font-size: 13px; color: var(--text-sub); line-height: 1.5; }
+
+        /* --- HOME SCREEN --- */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .user-greeting p { font-size: 14px; color: var(--text-sub); }
+        .user-greeting h1 { font-size: 26px; font-weight: 700; color: var(--text-main); }
+        .avatar { width: 45px; height: 45px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 18px; }
+        
+        .hero-card { background: linear-gradient(135deg, #e0f7f9 0%, #f1f8f9 100%); border-radius: 28px; padding: 24px; position: relative; margin-bottom: 20px; }
+        .badge { display: flex; align-items: center; gap: 6px; color: var(--primary); font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 12px; }
+        .hero-card h2 { font-size: 20px; width: 70%; margin-bottom: 8px; color: var(--text-main); }
+        .hero-card p { font-size: 13px; width: 65%; color: var(--text-sub); margin-bottom: 20px; line-height: 1.5; }
+        .btn-action { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+        .brain-deco { position: absolute; right: 10px; top: 20px; width: 100px; pointer-events: none; }
+
+        .status-strip { background: white; padding: 16px 20px; border-radius: 22px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
+        .status-label span { font-size: 11px; color: var(--text-sub); text-transform: uppercase; }
+        .status-label h3 { color: #27ae60; font-size: 18px; }
+        .indicator { display: flex; gap: 5px; }
+        .dot { width: 10px; height: 28px; background: #edeff0; border-radius: 4px; }
+        .dot.active { background: #27ae60; }
+
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .menu-item { background: white; padding: 20px; border-radius: 24px; cursor: pointer; position: relative; }
+        .icon-wrap { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; margin-bottom: 12px; }
+        .menu-item h4 { font-size: 14px; margin-bottom: 4px; color: var(--text-main); }
+        .menu-item p { font-size: 11px; color: var(--text-sub); }
+        .chevron { font-size: 10px; color: #ccc; margin-top: 12px; display: block; }
+
+        /* --- DASHBOARD STYLES --- */
+        .dash-risk-card { background: #e7f6f2; border-radius: 20px; padding: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .risk-info { display: flex; align-items: center; gap: 12px; }
+        .risk-icon-circle { width: 40px; height: 40px; background: #3ba9c233; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary); }
+        .risk-percentage { color: #27ae60; font-weight: 700; font-size: 14px; }
+        .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 25px; }
+        .stat-box { background: white; border-radius: 18px; padding: 15px 5px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
+        .stat-box i { color: var(--primary); margin-bottom: 8px; font-size: 18px; }
+        .stat-box h4 { font-size: 18px; color: var(--text-main); }
+        .stat-box p { font-size: 10px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
+        .chart-wrapper { background: white; border-radius: 24px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
+        .chart-wrapper h4 { font-size: 14px; margin-bottom: 15px; color: var(--text-main); font-weight: 600; }
+        .canvas-container { position: relative; height: 160px; width: 100%; }
+
+        /* --- DEMENTIA SCAN SCREEN --- */
+        .toggle-container { background: #e9eff1; border-radius: 15px; display: flex; padding: 5px; margin-bottom: 25px; }
+        .toggle-btn { flex: 1; padding: 12px; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; background: transparent; color: var(--text-sub); display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .toggle-btn.active { background: white; color: var(--text-main); box-shadow: 0 4px 10px rgba(0,0,0,0.05); outline: 2px solid #000; }
+        .upload-zone { border: 2px dashed #d1dce0; border-radius: 24px; padding: 40px 20px; text-align: center; background: #fbfcfc; display: none; }
+        .upload-zone.active { display: block; }
+        .upload-icon { width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; color: white; font-size: 24px; }
+        .tap-link { color: var(--primary); font-weight: 600; font-size: 14px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 10px; }
+
+        /* --- VOICE COMPANION SCREEN --- */
+        .chat-container { display: flex; flex-direction: column; gap: 20px; flex: 1; }
+        .bubble { padding: 16px; border-radius: 20px; max-width: 85%; font-size: 14px; line-height: 1.5; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+        .ai-bubble { background: white; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .ai-label { font-size: 11px; color: var(--primary); font-weight: 700; margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
+        .user-bubble { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .mic-panel { background: white; border-radius: 30px; padding: 30px 20px; margin-top: 20px; text-align: center; box-shadow: 0 -10px 20px rgba(0,0,0,0.02); }
+        .big-mic { width: 70px; height: 70px; background: #4db6ac; border: 4px solid #2d3436; border-radius: 50%; color: white; font-size: 28px; cursor: pointer; margin-top: 10px; }
+
+        /* --- MIND GAMES SCREEN --- */
+        .games-hero { background: var(--accent-purple); border-radius: 28px; padding: 24px; color: white; margin-bottom: 30px; position: relative; }
+        .games-hero .badge { color: white; opacity: 0.9; margin-bottom: 12px; }
+        .games-hero h2 { font-size: 22px; margin-bottom: 8px; }
+        .games-hero p { font-size: 13px; opacity: 0.85; margin-bottom: 20px; width: 80%; }
+        .btn-game-start { background: rgba(255,255,255,0.2); border: none; padding: 12px 24px; border-radius: 14px; color: white; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .games-section-title { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 15px; }
+        .game-list { display: flex; flex-direction: column; gap: 15px; padding-bottom: 20px; }
+        .game-card { background: white; padding: 18px; border-radius: 22px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 10px rgba(0,0,0,0.02); cursor: pointer; }
+        .game-info { display: flex; align-items: center; gap: 15px; }
+        .game-icon { width: 45px; height: 45px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; }
+        .game-text h4 { font-size: 15px; color: var(--text-main); margin-bottom: 2px; }
+        .game-text p { font-size: 12px; color: var(--text-sub); }
+        .diff-tag { font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: capitalize; }
+        .diff-easy { background: #e8f5e9; color: #2e7d32; }
+        .diff-medium { background: #fff3e0; color: #ef6c00; }
+        .diff-hard { background: #ffebee; color: #c62828; }
+
+        /* --- BOTTOM NAV --- */
+        .bottom-nav { position: absolute; bottom: 0; left: 0; right: 0; height: 75px; background: white; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #f0f0f0; z-index: 100; }
+        .nav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #bdc3c7; font-size: 10px; text-decoration: none; cursor: pointer; }
+        .nav-tab.active { color: var(--primary); }
+        .nav-tab i { font-size: 22px; }
+        .nav-tab.scan-active i { background: #e0f2f1; padding: 10px; border-radius: 12px; color: var(--primary); }
+
+        .avatar-container {
+    position: relative;
+    cursor: pointer;
+}
+
+/* Dropdown box */
+.dropdown-menu {
+    position: absolute;
+    top: 55px;
+    right: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    width: 140px;
+    display: none;
+    overflow: hidden;
+    z-index: 200;
+}
+
+/* Show dropdown */
+.dropdown-menu.show {
+    display: block;
+}
+
+/* Dropdown item */
+.dropdown-item {
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    background: none;
+    text-align: left;
+    font-size: 14px;
+    color: #2d3436;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dropdown-item:hover {
+    background: #f5f5f5;
+}
+
+.tap-upload {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 12px 18px;
+
+    background: #ffffff;
+    color: #2d3436;
+
+    border: 1.5px solid #dfe6e9;
+    border-radius: 12px;
+
+    font-size: 14px;
+    font-weight: 500;
+
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* Icon */
+.tap-upload i {
+    font-size: 14px;
+    color: #3ba9c2;
+}
+
+/* Hover (very subtle) */
+.tap-upload:hover {
+    border-color: #3ba9c2;
+    background: #f7fbfc;
+}
+
+/* Click */
+.tap-upload:active {
+    transform: scale(0.97);
+}
+
+    </style>
+</head>
+<body>
+
+
+    
+<div class="app-shell">
+    
+    <main id="home-screen" class="screen active padding-wrap">
+        <header class="header">
+    <div class="user-greeting">
+        <p>Welcome back,</p>
+        <h1>{{ user.profile.name }} 👋</h1>
+    </div>
+
+    <!-- Avatar + Dropdown -->
+    <div class="avatar-container">
+        <div class="avatar" onclick="toggleDropdown()">
+            {{ user.profile.name|slice:":1" }}
+        </div>
+
+        <!-- Dropdown Menu -->
+        <div id="dropdownMenu" class="dropdown-menu">
+            <form method="POST" action="/logout/">
+                {% csrf_token %}
+                <button type="submit" class="dropdown-item">
+                    <i class="fa-solid fa-right-from-bracket"></i> Logout
+                </button>
+            </form>
+        </div>
+    </div>
+</header>
+
+
+        <section class="hero-card">
+            <div class="badge"><i class="fa-regular fa-shield"></i> Daily Check-in</div>
+            <h2>How are you feeling today?</h2>
+            <p>Start a voice session to check in with your AI companion</p>
+            <button class="btn-action" onclick="showScreen('voice-screen')">
+                <i class="fa-solid fa-microphone"></i> Start Session
+            </button>
+            <img src="https://img.icons8.com/plasticine/200/brain.png" class="brain-deco" alt="Brain">
+        </section>
+        <div class="status-strip">
+            <div class="status-label"><span>Current Risk Level</span><h3>Low Risk</h3></div>
+            <div class="indicator"><div class="dot active"></div><div class="dot"></div><div class="dot"></div></div>
+        </div>
+        <div class="menu-grid">
+            <div class="menu-item" onclick="showScreen('voice-screen')">
+                <div class="icon-wrap" style="background:#4db6ac"><i class="fa-solid fa-microphone"></i></div>
+                <h4>Voice Interaction</h4><p>Talk with your AI companion</p>
+                <i class="fa-solid fa-chevron-right chevron"></i>
+            </div>
+            <div class="menu-item" onclick="showScreen('scan-screen')">
+                <div class="icon-wrap" style="background:var(--accent-orange)"><i class="fa-solid fa-brain"></i></div>
+                <h4>Dementia Scan</h4><p>Audio & MRI analysis</p>
+                <i class="fa-solid fa-chevron-right chevron"></i>
+            </div>
+            <div class="menu-item" onclick="showScreen('progress-screen')">
+                <div class="icon-wrap" style="background:#4f9da6"><i class="fa-solid fa-chart-simple"></i></div>
+                <h4>Dashboard</h4><p>Track weekly progress</p>
+                <i class="fa-solid fa-chevron-right chevron"></i>
+            </div>
+            <div class="menu-item" onclick="showScreen('games-screen')">
+                <div class="icon-wrap" style="background:var(--accent-purple)"><i class="fa-solid fa-gamepad"></i></div>
+                <h4>Mind Games</h4><p>Audio-based brain exercises</p>
+                <i class="fa-solid fa-chevron-right chevron"></i>
+            </div>
+        </div>
+    </main>
+
+    <main id="progress-screen" class="screen padding-wrap">
+        <div class="back-nav">
+            <button class="back-btn" onclick="showScreen('home-screen')"><i class="fa-solid fa-arrow-left"></i></button>
+            <div><h1 style="font-size: 22px;">Progress Dashboard</h1><p style="font-size: 14px; color: var(--text-sub);">Weekly improvement tracking</p></div>
+        </div>
+        <div class="dash-risk-card">
+            <div class="risk-info">
+                <div class="risk-icon-circle"><i class="fa-solid fa-bullseye"></i></div>
+                <div><p style="font-size: 11px; color: var(--text-sub); text-transform: uppercase;">Overall Risk Level</p><h3 style="color:#27ae60; font-size: 16px;">Low Risk</h3></div>
+            </div>
+            <div class="risk-percentage"><i class="fa-solid fa-arrow-trend-up"></i> +12%</div>
+        </div>
+        <div class="stat-row">
+            <div class="stat-box"><i class="fa-solid fa-brain"></i><h4>78%</h4><p>Cognitive</p></div>
+            <div class="stat-box"><i class="fa-solid fa-bolt"></i><h4>24</h4><p>Sessions</p></div>
+            <div class="stat-box"><i class="fa-solid fa-calendar-check"></i><h4>7 days</h4><p>Streak</p></div>
+        </div>
+        <div class="chart-wrapper"><h4>Weekly Cognitive Score</h4><div class="canvas-container"><canvas id="scoreLineChart"></canvas></div></div>
+        <div class="chart-wrapper"><h4>Games Completed</h4><div class="canvas-container"><canvas id="gamesBarChart"></canvas></div></div>
+    </main>
+
+    <main id="scan-screen" class="screen padding-wrap">
+        <div class="back-nav">
+            <button class="back-btn" onclick="showScreen('home-screen')"><i class="fa-solid fa-arrow-left"></i></button>
+            <div><h1 style="font-size: 22px;">Dementia Scan</h1><p style="font-size: 14px; color: var(--text-sub);">Audio & MRI analysis</p></div>
+        </div>
+        <div class="toggle-container">
+            <button id="toggle-voice" class="toggle-btn active" onclick="switchScanMode('voice')"><i class="fa-solid fa-microphone"></i> Voice Analysis</button>
+            <button id="toggle-mri" class="toggle-btn" onclick="switchScanMode('mri')"><i class="fa-regular fa-image"></i> MRI Scan</button>
+        </div>
+        <div id="voice-view" class="upload-zone active">
+    <div class="upload-icon" style="background: var(--primary);">
+        <i class="fa-solid fa-microphone"></i>
+    </div>
+
+    <h3>Upload Voice Recording</h3>
+
+    <form id="audioForm" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <input type="file" name="audio" id="audioInput" accept=".wav" hidden>
+
+        <button type="button" class="tap-upload"
+    onclick="document.getElementById('audioInput').click()">
+    <i class="fa-solid fa-upload"></i>
+    <span>Upload audio</span>
+</button>
+    </form>
+
+
+
+    <!-- RESULT -->
+    <div id="resultBox" style="
+        margin-top:15px;
+        padding:12px;
+        border-radius:12px;
+        background:#f2fcf8;
+        font-weight:600;">
+    </div>
+
+</div>
+        <div id="mri-view" class="upload-zone">
+    <div class="upload-icon" style="background: var(--accent-orange);">
+        <i class="fa-regular fa-image"></i>
+    </div>
+
+    <h3>Upload MRI Image</h3>
+
+    <form id="mriForm" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <input type="file" name="mri" id="mriInput" accept="image/*" hidden>
+
+        <button type="button" class="tap-upload"
+            onclick="document.getElementById('mriInput').click()">
+            <i class="fa-solid fa-upload"></i> Tap to upload
+        </button>
+
+        
+    </form>
+
+    <!-- RESULT -->
+    <div id="mriResultBox" style="
+        margin-top:15px;
+        padding:12px;
+        border-radius:12px;
+        background:#fcf9f5;
+        font-weight:600;">
+    </div>
+</div>
+
+
+    </main>
+
+    <main id="voice-screen" class="screen padding-wrap">
+        <div class="back-nav">
+            <button class="back-btn" onclick="showScreen('home-screen')"><i class="fa-solid fa-arrow-left"></i></button>
+            <div><h1 style="font-size: 22px;">Voice Companion</h1></div>
+        </div>
+        <div class="chat-container">
+            <div class="bubble ai-bubble"><div class="ai-label"><i class="fa-solid fa-volume-high"></i> AI Companion</div>Hello Sarah! How are you today?</div>
+        </div>
+        <div class="mic-panel"><button class="big-mic"><i class="fa-solid fa-microphone"></i></button></div>
+    </main>
+
+    <main id="games-screen" class="screen padding-wrap">
+        <div class="back-nav">
+            <button class="back-btn" onclick="showScreen('home-screen')"><i class="fa-solid fa-arrow-left"></i></button>
+            <div><h1 style="font-size: 22px;">Mind Games</h1><p style="font-size: 14px; color: var(--text-sub);">Audio-based brain exercises</p></div>
+        </div>
+        <section class="games-hero">
+            <div class="badge"><i class="fa-solid fa-headphones"></i> Daily Challenge</div>
+            <h2>Audio Memory Quest</h2><p>Complete today's set of 3 games to maintain your streak!</p>
+            <button class="btn-game-start"><i class="fa-solid fa-play"></i> Start Challenge</button>
+        </section>
+        <h3 class="games-section-title">All Games</h3>
+        <div class="game-list">
+            <div class="game-card"><div class="game-info"><div class="game-icon" style="background:#4db6ac;"><i class="fa-solid fa-volume-high"></i></div><div class="game-text"><h4>Word Recall</h4><p>Listen & repeat words</p></div></div><span class="diff-tag diff-easy">Easy</span></div>
+            <div class="game-card"><div class="game-info"><div class="game-icon" style="background:#ff8a65;"><i class="fa-solid fa-music"></i></div><div class="game-text"><h4>Sound Match</h4><p>Match sounds to images</p></div></div><span class="diff-tag diff-easy">Easy</span></div>
+            <div class="game-card"><div class="game-info"><div class="game-icon" style="background:#9575cd;"><i class="fa-solid fa-message"></i></div><div class="game-text"><h4>Story Sequence</h4><p>Order story events</p></div></div><span class="diff-tag diff-medium">Medium</span></div>
+            <div class="game-card"><div class="game-info"><div class="game-icon" style="background:#4f9da6;"><i class="fa-solid fa-arrows-rotate"></i></div><div class="game-text"><h4>Pattern Repeat</h4><p>Repeat audio patterns</p></div></div><span class="diff-tag diff-hard">Hard</span></div>
+        </div>
+    </main>
+
+    <nav class="bottom-nav">
+        <div class="nav-tab active" onclick="showScreen('home-screen')"><i class="fa-solid fa-house"></i><span>Home</span></div>
+        <div class="nav-tab" onclick="showScreen('voice-screen')"><i class="fa-solid fa-microphone"></i><span>Voice</span></div>
+        <div class="nav-tab" id="nav-scan" onclick="showScreen('scan-screen')"><i class="fa-solid fa-brain"></i><span>Scan</span></div>
+        <div class="nav-tab" id="nav-progress" onclick="showScreen('progress-screen')"><i class="fa-solid fa-chart-line"></i><span>Progress</span></div>
+        <div class="nav-tab" id="nav-games" onclick="showScreen('games-screen')"><i class="fa-solid fa-gamepad"></i><span>Games</span></div>
+    </nav>
+</div>
+
+<script>
+    let activeCharts = [];
+
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active', 'scan-active'));
+        if(id === 'home-screen') document.querySelectorAll('.nav-tab')[0].classList.add('active');
+        if(id === 'voice-screen') document.querySelectorAll('.nav-tab')[1].classList.add('active');
+        if(id === 'scan-screen') document.getElementById('nav-scan').classList.add('active', 'scan-active');
+        if(id === 'progress-screen') {
+            document.getElementById('nav-progress').classList.add('active');
+            initProgressCharts();
+        }
+        if(id === 'games-screen') document.getElementById('nav-games').classList.add('active');
+    }
+
+    function initProgressCharts() {
+        activeCharts.forEach(chart => chart.destroy());
+        activeCharts = [];
+
+        const ctx1 = document.getElementById('scoreLineChart').getContext('2d');
+        activeCharts.push(new Chart(ctx1, {
+            type: 'line',
+            data: { labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'], datasets: [{ data: [72, 75, 68, 80, 82, 85, 88], borderColor: '#3ba9c2', fill: true, tension: 0.4, pointRadius: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
+        }));
+    }
+
+    function switchScanMode(mode) {
+        document.getElementById('toggle-voice').classList.toggle('active', mode === 'voice');
+        document.getElementById('toggle-mri').classList.toggle('active', mode === 'mri');
+        document.getElementById('voice-view').classList.toggle('active', mode === 'voice');
+        document.getElementById('mri-view').classList.toggle('active', mode === 'mri');
+    }
+
+    function toggleDropdown() {
+    document.getElementById("dropdownMenu").classList.toggle("show");
+}
+
+// Close when clicking outside
+document.addEventListener("click", function(event) {
+    const dropdown = document.getElementById("dropdownMenu");
+    const avatar = document.querySelector(".avatar");
+
+    if (!avatar.contains(event.target) && !dropdown.contains(event.target)) {
+        dropdown.classList.remove("show");
+    }
+});
+
+
+document.getElementById("audioInput").addEventListener("change", function () {
+    let formData = new FormData();
+    formData.append("audio", this.files[0]);
+
+    fetch("/audio-scan/", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById("resultBox").innerHTML =
+            "🧠Result: " + data.result + "<br>Confidence: " + data.confidence;
+    })
+    .catch(error => {
+        console.error(error);
+    });
+});
+
+document.getElementById("mriInput").addEventListener("change", function () {
+    let formData = new FormData();
+    formData.append("mri", this.files[0]);
+
+    fetch("/mri-scan/", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById("mriResultBox").innerHTML =
+            "MRI Result: " + data.result + "<br>Confidence: " + data.confidence;
+    })
+    .catch(error => console.error(error));
+});
+
+
+function initProgressCharts() {
+    fetch("/dashboard-data/")
+    .then(res => res.json())
+    .then(data => {
+
+        // ---------- UPDATE TEXT ----------
+        document.querySelector(".dash-risk-card h3").innerText = data.risk + " Risk";
+        document.querySelectorAll(".stat-box h4")[1].innerText = data.sessions;
+        document.querySelectorAll(".stat-box h4")[2].innerText = data.streak + " days";
+
+        // ---------- DESTROY OLD CHART ----------
+        activeCharts.forEach(chart => chart.destroy());
+        activeCharts = [];
+
+        // ---------- LINE CHART ----------
+        const ctx1 = document.getElementById('scoreLineChart').getContext('2d');
+
+        activeCharts.push(new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.weekly_scores,
+                    borderColor: '#3ba9c2',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { display: false },
+                    x: { grid: { display: false } }
+                }
+            }
+        }));
+    });
+}
+
+</script>
+
+</body>
+</html>
